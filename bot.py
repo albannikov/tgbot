@@ -9,40 +9,59 @@ import config
 bot = telebot.TeleBot(config.token)
 
 
-@bot.message_handler(commands=['start'])
-def start(message):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn1 = types.KeyboardButton("👋 Поздороваться")
-    btn2 = types.KeyboardButton("❓ Задать вопрос")
-    markup.add(btn1, btn2)
-    bot.send_message(message.chat.id, text="Привет, {0.first_name}! Я тестовый бот для твоей статьи для habr.com".format(message.from_user), reply_markup=markup)
+# Обычный режим
+@bot.message_handler(content_types=["text"])
+def any_msg(message):
+    keyboard = types.InlineKeyboardMarkup()
+    callback_button = types.InlineKeyboardButton(text="💥 Антитеррор", callback_data="test")
+    keyboard.add(callback_button)
+    callback_button = types.InlineKeyboardButton(text="💳 Коррупция", callback_data="test2")
+    keyboard.add(callback_button)
+    bot.send_message(message.chat.id, "Я – сообщение из обычного режима", reply_markup=keyboard)
 
-    
-@bot.message_handler(content_types=['text'])
-def func(message):
-    if(message.text == "👋 Поздороваться"):
-        bot.send_message(message.chat.id, text="Привеет.. Спасибо что читаешь статью!)")
-    elif(message.text == "❓ Задать вопрос"):
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton("Как меня зовут?")
-        btn2 = types.KeyboardButton("Что я могу?")
-        back = types.KeyboardButton("Вернуться в главное меню")
-        markup.add(btn1, btn2, back)
-        bot.send_message(message.chat.id, text="Задай мне вопрос", reply_markup=markup)
-    
-    elif(message.text == "Как меня зовут?"):
-        bot.send_message(message.chat.id, "У меня нет имени..")
-    
-    elif message.text == "Что я могу?":
-        bot.send_message(message.chat.id, text="Поздороваться с читателями")
-    
-    elif (message.text == "Вернуться в главное меню"):
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        button1 = types.KeyboardButton("👋 Поздороваться")
-        button2 = types.KeyboardButton("❓ Задать вопрос")
-        markup.add(button1, button2)
-        bot.send_message(message.chat.id, text="Вы вернулись в главное меню", reply_markup=markup)
-    else:
-        bot.send_message(message.chat.id, text="На такую комманду я не запрограммировал..")
 
-bot.polling(none_stop=True)
+# Инлайн-режим с непустым запросом
+@bot.inline_handler(lambda query: len(query.query) > 0)
+def query_text(query):
+    kb = types.InlineKeyboardMarkup()
+    # Добавляем колбэк-кнопку с содержимым "test"
+    kb.add(types.InlineKeyboardButton(text="Нажми меня", callback_data="test"))
+    results = []
+    single_msg = types.InlineQueryResultArticle(
+        id="1", title="Press me",
+        input_message_content=types.InputTextMessageContent(message_text="Я – сообщение из инлайн-режима"),
+        reply_markup=kb
+    )
+    results.append(single_msg)
+    bot.answer_inline_query(query.id, results)
+    
+def query_text(query2):
+    kb = types.InlineKeyboardMarkup()
+    # Добавляем колбэк-кнопку с содержимым "test"
+    kb.add(types.InlineKeyboardButton(text="Нажми меня2", callback_data="test2"))
+    results2 = []
+    single_msg2 = types.InlineQueryResultArticle(
+        id="1", title="Press me2",
+        input_message_content=types.InputTextMessageContent(message_text="Я – сообщение из инлайн-режима2"),
+        reply_markup=kb
+    )
+    results2.append(single_msg2)
+    bot.answer_inline_query(query2.id, results2)
+    
+
+# В большинстве случаев целесообразно разбить этот хэндлер на несколько маленьких
+@bot.callback_query_handler(func=lambda call: True)
+def callback_inline(call):
+    # Если сообщение из чата с ботом
+    if call.message:
+        if call.data == "test":
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Опишите ситуацию, в которой Вы столкнулись с терроризмом")
+        if call.data == "test2":
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Опишите ситуацию, в которой Вы столкнулись с коррупцией")    
+    # Если сообщение из инлайн-режима
+    elif call.inline_message_id:
+        if call.data == "test":
+            bot.edit_message_text(inline_message_id=call.inline_message_id, text="Бдыщь")
+
+if __name__ == '__main__':
+    bot.infinity_polling()
